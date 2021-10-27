@@ -103,11 +103,11 @@ contract LocalZine is ERC1155, AccessControl, ERC1155Burnable {
 
         for(uint256 i = 0; i < collaboratorAddresses.length; i++){
             _addressToRole[collaboratorAddresses[i]] = COLLABORATOR_ROLE;
-            participants.push(Participant(collaboratorAddresses[i], COLLABORATOR_ROLE, _roleToMintAmount[COLLABORATOR_ROLE]));
+            participants.push(Participant(collaboratorAddresses[i], COLLABORATOR_ROLE));
         }
         for(uint256 i = 0; i < communityAddresses.length; i++){
             _addressToRole[communityAddresses[i]] = COMMUNITY_ROLE;
-            participants.push(Participant(communityAddresses[i], COMMUNITY_ROLE, _roleToMintAmount[COMMUNITY_ROLE]));
+            participants.push(Participant(communityAddresses[i], COMMUNITY_ROLE));
         }
     }
     
