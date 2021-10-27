@@ -13,7 +13,7 @@ contract LocalZine is ERC1155, AccessControl, ERC1155Burnable {
     bytes32 public constant COMMUNITY_ROLE = keccak256("COMMUNITY_ROLE");
 
     mapping(bytes32 => uint256) private _roleToMintAmount;
-    mapping(uint256 => bytes32) private _addressToRole;
+    mapping(address => bytes32) private _addressToRole;
     mapping (uint256 => string) private _uris;
     
     uint256 public constant FRONT_COVER = 0;
@@ -43,7 +43,6 @@ contract LocalZine is ERC1155, AccessControl, ERC1155Burnable {
      struct Participant {
         address walletAddr; 
         bytes32 role;
-        uint256 number_of_tokens; 
     }
     Participant[] participants;
 
