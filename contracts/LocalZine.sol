@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-// LocalZine.sol
 pragma solidity ^0.8.2;
-
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -14,7 +12,6 @@ contract LocalZine is ERC1155, AccessControl {
     bytes32 public constant COMMUNITY_ROLE = keccak256("COMMUNITY_ROLE");
 
     mapping(bytes32 => uint256) private _roleToMintAmount;
-    mapping(address => bytes32) private _addrToRole;
     mapping (uint256 => string) private _uris;
     
     uint256 public constant FRONT_COVER = 0;
@@ -27,10 +24,14 @@ contract LocalZine is ERC1155, AccessControl {
     uint256 public constant PAGE_7 = 7;
     uint256 public constant BACK_COVER = 8;
     
+    // for now define test accounts on rinkeby testnet.
     address private hiphop_hamburg = 0x88B7996A21df2FA8bA14706219569019E9D121a3;
     address private graffiti_hamburg = 0x7D98d9DA7eDBd83D7299e8d7A055614dB7dCe597;
+    address[] private communityAddresses = [graffiti_hamburg, hiphop_hamburg];
+   
     address private collaborator_one = 0xF2Bb8DCD9c246c03a42b029942DDD92Dd0Ea2302;
     address private collaborator_two = 0xf9268Ce96A1A66F061C8C1515343A33aAFff6d51;
+    address[] private collaboratorAddresses = [collaborator_one, collaborator_two];
     
     /* @doc
         role: Participant can have below roles:
@@ -42,11 +43,7 @@ contract LocalZine is ERC1155, AccessControl {
         bytes32 role;
         uint256 number_of_tokens; 
     }
-
-    address[] private collaboratorAddresses = [collaborator_one, collaborator_two];
-    address[] private communityAddresses = [graffiti_hamburg, hiphop_hamburg];
-    Participant[] private collaborators;
-    Participant[] private communities;
+    Participant[] participants;
 
     // TODO:// override setURI or URI function to inject {id}s. 
     // provide an IPFS root folder for multiple metadata for each token.
@@ -56,30 +53,20 @@ contract LocalZine is ERC1155, AccessControl {
         setCommunityAddresses();
         setupRoles();
         setMintAmounts();
-        initParticipants();
 
-        for(uint256 i = 0; i < collaboratorAddresses.length; i++){
-            mintToParticipant(FRONT_COVER, collaborators[i]);
-            mintToParticipant(PAGE_1, collaborators[i]);
-            mintToParticipant(PAGE_2, collaborators[i]);
-            mintToParticipant(PAGE_3, collaborators[i]);
-            mintToParticipant(PAGE_4, collaborators[i]);
-            mintToParticipant(PAGE_5, collaborators[i]);
-            mintToParticipant(PAGE_6, collaborators[i]);
-            mintToParticipant(PAGE_7, collaborators[i]);
-            mintToParticipant(BACK_COVER, collaborators[i]);
-        }
+        initParticipants(); 
+        require(participants.length > 0, "Der exists no collaborator nor community account defined.");
 
-        for(uint256 i = 0; i < communityAddresses.length; i++){
-            mintToParticipant(FRONT_COVER, communities[i]);
-            mintToParticipant(PAGE_1, communities[i]);
-            mintToParticipant(PAGE_2, communities[i]);
-            mintToParticipant(PAGE_3, communities[i]);
-            mintToParticipant(PAGE_4, communities[i]);
-            mintToParticipant(PAGE_5, communities[i]);
-            mintToParticipant(PAGE_6, communities[i]);
-            mintToParticipant(PAGE_7, communities[i]);
-            mintToParticipant(BACK_COVER, communities[i]);
+        for(uint256 i = 0; i < participants.length; i++){
+            mintToParticipant(FRONT_COVER, participants[i]);
+            mintToParticipant(PAGE_1, participants[i]);
+            mintToParticipant(PAGE_2, participants[i]);
+            mintToParticipant(PAGE_3, participants[i]);
+            mintToParticipant(PAGE_4, participants[i]);
+            mintToParticipant(PAGE_5, participants[i]);
+            mintToParticipant(PAGE_6, participants[i]);
+            mintToParticipant(PAGE_7, participants[i]);
+            mintToParticipant(BACK_COVER, participants[i]);
         }
     }
  
@@ -112,29 +99,19 @@ contract LocalZine is ERC1155, AccessControl {
     }
     
     function initParticipants() 
-    public onlyRole(MINTER_ROLE) 
-    returns(Participant[] memory) {
+    public onlyRole(MINTER_ROLE) {
+
         for(uint256 i = 0; i < collaboratorAddresses.length; i++){
-            addNewParticipant(communityAddresses[i], COLLABORATOR_ROLE);
+            participants.push(Participant(collaboratorAddresses[i], COLLABORATOR_ROLE, _roleToMintAmount[COLLABORATOR_ROLE]));
         }
         for(uint256 i = 0; i < communityAddresses.length; i++){
-            addNewParticipant(communityAddresses[i], COMMUNITY_ROLE);
+            participants.push(Participant(communityAddresses[i], COLLABORATOR_ROLE, _roleToMintAmount[COLLABORATOR_ROLE]));
         }
     }
     
     function mintToParticipant(uint256 tokenId, Participant memory participant) 
     public onlyRole(MINTER_ROLE) {
             _mint(participant.walletAddr, tokenId, _roleToMintAmount[participant.role], "");
-    }
-   
-    function addNewParticipant(address walletAddr, bytes32 role) public onlyRole(COLLABORATOR_ROLE) {
-        if(role == COLLABORATOR_ROLE) {
-            collaborators.push(Participant(walletAddr, role, _roleToMintAmount[role]));
-        }
-        if(role == COMMUNITY_ROLE) {
-            communities.push(Participant(walletAddr, role, _roleToMintAmount[role]));
-        }
-        _addrToRole[walletAddr] = role;
     }
     
     function setURI(string memory newuri) public onlyRole(URI_SETTER_ROLE) {
