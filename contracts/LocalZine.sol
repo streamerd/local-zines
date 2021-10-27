@@ -3,15 +3,17 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 
 // instead of ownable, using access control with roles
-contract LocalZine is ERC1155, AccessControl {
+contract LocalZine is ERC1155, AccessControl, ERC1155Burnable {
     bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant COLLABORATOR_ROLE = keccak256("COLLABORATOR_ROLE");
     bytes32 public constant COMMUNITY_ROLE = keccak256("COMMUNITY_ROLE");
 
     mapping(bytes32 => uint256) private _roleToMintAmount;
+    mapping(uint256 => bytes32) private _addressToRole;
     mapping (uint256 => string) private _uris;
     
     uint256 public constant FRONT_COVER = 0;
@@ -53,9 +55,8 @@ contract LocalZine is ERC1155, AccessControl {
         setCommunityAddresses();
         setupRoles();
         setMintAmounts();
-
         initParticipants(); 
-        require(participants.length > 0, "Der exists no collaborator nor community account defined.");
+        require(participants.length > 0, "Der exists no collaborator nor community account defined yet.");
 
         for(uint256 i = 0; i < participants.length; i++){
             mintToParticipant(FRONT_COVER, participants[i]);
@@ -102,10 +103,12 @@ contract LocalZine is ERC1155, AccessControl {
     public onlyRole(MINTER_ROLE) {
 
         for(uint256 i = 0; i < collaboratorAddresses.length; i++){
+            _addressToRole[collaboratorAddresses[i]] = COLLABORATOR_ROLE;
             participants.push(Participant(collaboratorAddresses[i], COLLABORATOR_ROLE, _roleToMintAmount[COLLABORATOR_ROLE]));
         }
         for(uint256 i = 0; i < communityAddresses.length; i++){
-            participants.push(Participant(communityAddresses[i], COLLABORATOR_ROLE, _roleToMintAmount[COLLABORATOR_ROLE]));
+            _addressToRole[communityAddresses[i]] = COMMUNITY_ROLE;
+            participants.push(Participant(communityAddresses[i], COMMUNITY_ROLE, _roleToMintAmount[COMMUNITY_ROLE]));
         }
     }
     
@@ -124,11 +127,13 @@ contract LocalZine is ERC1155, AccessControl {
         _mint(account, id, amount, data);
     }
 
-    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
-        public onlyRole(MINTER_ROLE)
-    {
-        _mintBatch(to, ids, amounts, data);
+    // collaborators can burn any tokens. 
+    // "Banksy Shreds 'Girl with Balloon' Painting after Sotheby's Auction"
+    // https://www.youtube.com/watch?v=BZ9PAoKvqX8
+    function burn(address walletAddr, uint256 tokenId, uint256 amount) public override onlyRole(COLLABORATOR_ROLE){
+        _burn(walletAddr, tokenId, amount);
     }
+
 
     // The following functions are overrides required by Solidity.
 
